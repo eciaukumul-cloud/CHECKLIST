@@ -66,6 +66,12 @@ input[type=date],input[type=time]{min-height:44px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input[type=date],:root:not([data-theme="light"]) input[type=time]{color-scheme:dark}}
 :root[data-theme="dark"] input[type=date],:root[data-theme="dark"] input[type=time]{color-scheme:dark}
 input.pk{cursor:pointer}
+
+.hbtn{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:10px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer}
+.hint{background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.35);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;line-height:1.4}
+#tour{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:40}
+#tour .box{background:var(--card);padding:20px;border-radius:16px;max-width:360px;margin:12px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+details summary{list-style:none}details summary::before{content:'▸ ';color:var(--pri)}details[open] summary::before{content:'▾ '}
 </style>
 </head>
 <body>
@@ -78,7 +84,7 @@ input.pk{cursor:pointer}
 <script>
 const ESTADOS=['Pendiente','Cumple','No cumple','N/A'];
 const folioNuevo=()=>{const u=new Set();[...S.reportes,...(S.rep?[S.rep]:[])].forEach(r=>r.items.forEach(i=>i.folio&&u.add(String(i.folio))));let f;do{f=String(10000+Math.floor(Math.random()*90000))}while(u.has(f));return f};
-const histLista=rg=>rg.slice().reverse().map(r=>{const a=r.items.length-r.items.filter(i=>i.estado==='N/A').length,p=a?Math.round(r.items.filter(i=>i.estado==='Cumple').length/a*100):0,cl=p>=90?'var(--ok)':p>=70?'#d97706':'var(--no)',nf=r.items.reduce((q,i)=>q+i.fotos.length,0);
+const histLista=rg=>!rg.length?'<div class="sc"><p class="mut" style="margin:0">Aún no hay reportes en esta vista. Toca 📝 Nuevo reporte para crear el primero.</p></div>':rg.slice().reverse().map(r=>{const a=r.items.length-r.items.filter(i=>i.estado==='N/A').length,p=a?Math.round(r.items.filter(i=>i.estado==='Cumple').length/a*100):0,cl=p>=90?'var(--ok)':p>=70?'#d97706':'var(--no)',nf=r.items.reduce((q,i)=>q+i.fotos.length,0);
   return `<div class="ac" style="border-left-color:${cl}"><div class="row sec" style="justify-content:space-between"><span class="chip">${r.folio?r.folio+' · ':''}📅 ${r.fecha} · ${r.hora}</span><span class="chip" style="color:${cl}">${p}% cumplimiento</span></div>
     <div style="font-weight:700;font-size:17px">${esc(r.equipo)}</div>
     <div class="mut" style="margin:2px 0 10px">👤 ${esc(r.responsable||'-')}${r.supervisor?' · 👷 '+esc(r.supervisor):''} · ${r.items.length} actividades · ${nf} fotos</div>
@@ -89,7 +95,7 @@ const enRango=()=>S.reportes.filter(r=>(!S.desde||r.fecha>=S.desde)&&(!S.hasta||
 const opt=e=>ESTADOS.map(x=>`<option${x===e?' selected':''}>${x}</option>`).join('');
 const COL={Pendiente:'var(--pen)',Cumple:'var(--ok)','No cumple':'var(--no)','N/A':'var(--na)'};
 const BASE=['Inspección visual general','Lubricación','Revisión de bandas / rodillos','Limpieza del área','Condiciones de seguridad'];
-const S={tab:'nuevo',plantillas:[{n:'General',items:BASE.slice()}],reportes:[],rep:null,t:0,filtro:'todos',desde:'',hasta:'',sfolio:'',sdesde:'',shasta:'',editId:null,xfotos:true,cal:'normal',equipos:[],planta:'',logo:'',dest:null,avisoCerrado:false,borrador:null,sel:new Set()};
+const S={tab:'nuevo',plantillas:[{n:'General',items:BASE.slice()}],reportes:[],rep:null,t:0,filtro:'todos',desde:'',hasta:'',sfolio:'',sdesde:'',shasta:'',editId:null,xfotos:true,cal:'normal',equipos:[],planta:'',logo:'',dest:null,avisoCerrado:false,borrador:null,sel:new Set(),hints:true,prev:'nuevo'};
 const $=s=>document.querySelector(s), app=$('#app');
 let tt;function aviso(t){let e=$('#toast');if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e)}e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',3500)}
 window.alert=aviso;
@@ -113,8 +119,8 @@ const segCards=vis=>{const at=x=>x.it.atendido==='Atendido';
     <div style="font-weight:700;font-size:17px">${esc(x.it.texto)}</div><div class="mut" style="margin:2px 0 8px">🏭 ${esc(x.r.equipo)}${x.it.lista?' · '+esc(x.it.lista):''} · Estado: ${x.it.estado}</div>`+
     (x.it.fotos.length||(x.it.fotosDespues||[]).length?`<div class="fotos">`+x.it.fotos.map((f,j)=>`<div class="foto"><img src="${f.data}" alt="Foto ${j+1}"><div class="mut">${esc(f.desc)||'Sin descripción'}</div></div>`).join('')+(x.it.fotosDespues||[]).map(f=>`<div class="foto"><div class="lb">DESPUÉS</div><img src="${f.data}" alt="Foto después"></div>`).join('')+`</div>`:'')+
     (x.it.sinFotos&&!x.it.fotos.length?'<div class="mut">Fotos eliminadas para liberar espacio</div>':'')+
-    `<label class="lb" style="margin-top:8px">📌 Atención</label><select data-at="${x.r.id}|${x.ii}" style="background:${at(x)?'var(--ok)':x.it.atendido==='En proceso'?'#d97706':'var(--no)'};color:#fff;border:0;font-weight:600">${['No atendido','En proceso','Atendido'].map(o=>`<option${(x.it.atendido||'No atendido')===o?' selected':''}>${o}</option>`).join('')}</select>${avanceHtml(x)}`+
-    (at(x)?`<label class="lb" style="margin-top:8px">📆 Fecha en que se atendió</label><input type="date" class="pk" data-sx="${x.r.id}|${x.ii}|fechaAt" value="${x.it.fechaAt||''}" max="${hoyISO()}">`:'')+segExtra(x)+bitHtml(x.it)+`</div>`}).join(''):'<p class="mut">No hay actividades que coincidan con la búsqueda.</p>'};
+    `<label class="lb" style="margin-top:8px">📌 ¿Ya se atendió este hallazgo?</label><select data-at="${x.r.id}|${x.ii}" style="background:${at(x)?'var(--ok)':x.it.atendido==='En proceso'?'#d97706':'var(--no)'};color:#fff;border:0;font-weight:600">${['No atendido','En proceso','Atendido'].map(o=>`<option${(x.it.atendido||'No atendido')===o?' selected':''}>${o}</option>`).join('')}</select>${avanceHtml(x)}`+
+    (at(x)?`<label class="lb" style="margin-top:8px">📆 Fecha en que se atendió</label><input type="date" class="pk" data-sx="${x.r.id}|${x.ii}|fechaAt" value="${x.it.fechaAt||''}" max="${hoyISO()}">`:'')+segExtra(x)+bitHtml(x.it)+`</div>`}).join(''):'<p class="mut">'+(segTodos().length?'No hay actividades que coincidan con la búsqueda.':'Aquí aparecerán las actividades que tengan fotos. Agrega fotos a una actividad en 📝 Nuevo reporte y guarda el reporte.')+'</p>'};
 const seg=()=>{const vis=segItems();
   return `<p class="mut" id="sc">${segTxt(vis)}</p>
   <div class="sc"><div class="ttl">🔎 Buscar</div><label class="lb">Folio</label><input data-sq="sfolio" inputmode="numeric" placeholder="Ej. 48213" value="${esc(S.sfolio)}"><div class="g2"><div><label class="lb">📅 Desde</label><input type="date" data-sq="sdesde" value="${S.sdesde}"></div><div><label class="lb">📅 Hasta</label><input type="date" data-sq="shasta" value="${S.shasta}"></div></div><label class="lb" style="margin-top:10px">Estado de atención</label><select data-flt="1"><option value="todos"${S.filtro==='todos'?' selected':''}>Todas</option><option value="pend"${S.filtro==='pend'?' selected':''}>Por atender</option><option value="proc"${S.filtro==='proc'?' selected':''}>En proceso</option><option value="ok"${S.filtro==='ok'?' selected':''}>Atendidas</option></select><button class="btn g" data-act="sqlimpiar" style="width:100%;margin:10px 0 0">🧹 Limpiar búsqueda</button></div>
@@ -171,7 +177,7 @@ const resumen=()=>{
   '<p class="mut">Abiertos: actividades con fotos aún no atendidas. Vencidos: abiertos con fecha compromiso pasada.</p>'};
 async function respaldar(){await guardarArchivo('Respaldo_checklist_'+hoyISO()+'.json',JSON.stringify({v:1,reportes:S.reportes,equipos:S.equipos}))}
 const panelStats=()=>{let ab=0,ve=0,n=0,cu=0,na=0;S.reportes.forEach(r=>r.items.forEach(it=>{n++;if(it.estado==='Cumple')cu++;if(it.estado==='N/A')na++;if((it.fotos.length||it.sinFotos)&&it.atendido!=='Atendido')ab++;if(venc(it))ve++}));return{ab,ve,pct:(n-na)?Math.round(cu/(n-na)*100):null}};
-const panelHeader=()=>`<div class="hd">${S.logo?`<img src="${S.logo}" alt="Logotipo">`:'<div style="font-size:34px">🛠️</div>'}<div><h1>Panel de control</h1><small>${esc(S.planta||'Reportes de checklist')} · ${new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}</small></div></div>`;
+const panelHeader=()=>`<div class="hd">${S.logo?`<img src="${S.logo}" alt="Logotipo">`:'<div style="font-size:34px">🛠️</div>'}<div style="flex:1"><h1>Panel de control</h1><small>${esc(S.planta||'Reportes de checklist')} · ${new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}</small></div><button class="hbtn" data-act="ayuda">❓ Ayuda</button></div>`;
 const hasC=r=>r&&((r.equipo||'').trim()||(r.responsable||'').trim()||r.items.length);
 let bdT;const bdAuto=()=>{clearTimeout(bdT);bdT=setTimeout(()=>{if(S.rep&&!S.borrador&&hasC(S.rep))kvSet('borrador',{rep:S.rep,editId:S.editId})},400)};
 const bannerBorrador=()=>S.borrador?`<div class="card" style="border-color:#2563eb"><div class="act">📝 Reporte sin terminar</div><div style="margin-bottom:8px">Quedó un borrador${S.borrador.rep.equipo?' de '+esc(S.borrador.rep.equipo):''} con ${S.borrador.rep.items.length} actividad(es).</div><button class="btn" data-act="bdcont">▶️ Continuar</button><button class="btn r" data-act="bddesc">🗑️ Descartar</button></div>`:'';
@@ -185,6 +191,40 @@ async function espacio(){const el=$('#esp');if(!el)return;try{const e=await navi
   el.innerHTML=`<div class="row" style="justify-content:space-between"><span>Almacenamiento usado</span><b>${mb(e.usage)} de ${mb(e.quota)} (${p}%)</b></div><div style="background:var(--bd);border-radius:6px;height:10px;overflow:hidden;margin:4px 0"><div style="width:${Math.max(p,1)}%;height:100%;background:${p>=80?'var(--no)':p>=60?'#d97706':'var(--ok)'}"></div></div><div class="mut">Reportes y fotos: ${mb(datos)}${p>=80?' · ⚠️ Espacio casi lleno: respalda y usa Liberar espacio':''}</div>`}catch(x){el.textContent='No se pudo calcular el espacio disponible'}}
 const repFolio=()=>'REP-'+String(S.reportes.reduce((m,r)=>Math.max(m,+(String(r.folio||'').replace(/\D/g,''))||0),0)+1).padStart(4,'0');
 window.addEventListener('beforeunload',e=>{if(hasC(S.rep)&&!S.borrador){bdAuto();e.preventDefault();e.returnValue=''}});
+const TOUR=[['👋 ¡Bienvenido!','Esta app sirve para registrar inspecciones de equipos con fotos, dar seguimiento a lo que hay que corregir y generar reportes en PDF y Excel. Te muestro lo básico en un minuto.'],
+['📝 Nuevo reporte','Aquí capturas una inspección: escribe el equipo y quién elaboró, agrega las actividades revisadas, elige el resultado de cada una (Cumple, No cumple, N/A), toma fotos y toca Guardar. Si se cierra la app a la mitad, tu borrador se conserva.'],
+['🗂️ Historial','Aquí están tus reportes guardados. Puedes editarlos, descargar su PDF o exportar un Excel por rango de fechas. También respaldas y restauras tus datos.'],
+['✅ Seguimiento','Las actividades con fotos se vuelven hallazgos. Aquí marcas si ya se atendieron y pones la fecha, el avance, la prioridad y la fecha compromiso. Los vencidos se marcan en rojo.'],
+['📈 Resumen','Un vistazo de cómo van tus reportes: cumplimiento, hallazgos abiertos, equipos y semanas. Lo puedes exportar en PDF o mandarlo por WhatsApp.'],
+['💾 Importante','Tus reportes se guardan solo en este teléfono, no en internet. Haz un respaldo de vez en cuando desde Historial. Si necesitas ayuda, toca ❓ Ayuda arriba.']];
+function showTour(i){let m=$('#tour');if(!m){m=document.createElement('div');m.id='tour';document.body.appendChild(m)}
+  const [t,x]=TOUR[i],ult=i===TOUR.length-1;
+  m.innerHTML=`<div class="box"><h2 style="margin:0 0 8px;font-size:20px">${t}</h2><p style="margin:0 0 14px;line-height:1.5">${x}</p><div class="mut" style="text-align:center;margin-bottom:10px">${TOUR.map((_,k)=>k===i?'●':'○').join(' ')}</div><div class="row" style="gap:8px">${i?'<button class="btn g" data-t="prev" style="flex:1;margin:0">← Atrás</button>':'<button class="btn g" data-t="skip" style="flex:1;margin:0">Omitir</button>'}<button class="btn" data-t="${ult?'end':'next'}" style="flex:1;margin:0">${ult?'✔️ Entendido':'Siguiente →'}</button></div></div>`;
+  m.onclick=e=>{const a=e.target.dataset.t;if(!a)return;if(a==='next')showTour(i+1);else if(a==='prev')showTour(i-1);else{m.remove();kvSet('tour',true)}}}
+const HINTS={nuevo:'Llena los datos, agrega las actividades con su resultado y fotos, y toca 💾 Guardar reporte.',hist:'Tus reportes guardados: edítalos, descarga su PDF o exporta un Excel por fechas.',seg:'Aquí das seguimiento a las actividades con fotos: marca si ya se atendieron, su fecha, avance y prioridad.',res:'Un vistazo general de cómo van tus reportes y qué sigue pendiente.'};
+const tabHint=()=>S.hints&&HINTS[S.tab]?`<div class="hint">💡 ${HINTS[S.tab]}</div>`:'';
+const ayuda=()=>{const d=(t,b)=>`<details style="margin:8px 0"><summary style="cursor:pointer;font-weight:600">${t}</summary><div class="mut" style="margin:6px 0 4px;line-height:1.5">${b}</div></details>`;
+  return `<button class="btn g" data-act="ayback" style="margin:0 0 12px">← Volver</button>
+  <div class="sc"><div class="ttl">❓ Guía rápida</div><button class="btn" data-act="tour" style="width:100%;margin:0 0 10px">🎬 Ver tour de bienvenida</button><label class="mut" style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-hint="1" ${S.hints?'checked':''} style="width:auto;margin:0">Mostrar consejos en cada pantalla</label></div>
+  <div class="sc"><div class="ttl">🧭 Flujo recomendado</div><ol style="margin:0;padding-left:20px;line-height:1.7"><li><b>📝 Nuevo reporte:</b> captura la inspección con fotos y guárdala.</li><li><b>✅ Seguimiento:</b> da seguimiento a los hallazgos hasta cerrarlos.</li><li><b>📈 Resumen:</b> revisa cómo vas y manda el PDF o WhatsApp.</li><li><b>🗂️ Historial:</b> exporta el Excel y haz tu respaldo.</li></ol></div>
+  <div class="sc"><div class="ttl">📖 Qué significa cada cosa</div>`+
+  d('Resultado y Atención: ¿en qué se diferencian?','<b>Resultado</b> es lo que encontraste al inspeccionar: Cumple, No cumple, N/A (no aplica) o Pendiente. <b>Atención</b> es lo que pasó después con el hallazgo: No atendido, En proceso o Atendido.')+
+  d('Folio','Cada actividad tiene un <b>folio de 5 dígitos</b> único para identificarla. Cada reporte tiene su <b>folio de reporte</b>, como REP-0001.')+
+  d('Hallazgo','Una actividad que tiene fotos. Aparece en Seguimiento hasta que la marcas como atendida.')+
+  d('Prioridad','Qué tan urgente es: Alta, Media o Baja. En Seguimiento lo más urgente sale primero.')+
+  d('Fecha compromiso y Vencida','La fecha en que te comprometes a atenderla. Si pasa y sigue sin atender, se marca como <b>Vencida</b> en rojo.')+
+  d('Cumplimiento (%)','Actividades que cumplen entre las que aplican, sin contar las N/A. Verde desde 90%, ámbar de 70% a 89% y rojo por debajo de 70%.')+
+  d('Borrador','Si dejas un reporte a medias, se guarda solo. Al volver te aparece para continuarlo o descartarlo.')+
+  d('Bitácora','Dentro de cada actividad de Seguimiento: el historial de todos sus cambios, con fecha y hora.')+`</div>
+  <div class="sc"><div class="ttl">🙋 Preguntas frecuentes</div>`+
+  d('¿Dónde se guardan mis reportes?','Solo en este teléfono, dentro de la app. No se suben a internet, por eso conviene respaldar.')+
+  d('¿Cómo respaldo mis datos?','Historial → Datos y respaldo → 💾 Respaldar datos. Se descarga un archivo; guárdalo o mándalo a tu correo o WhatsApp.')+
+  d('¿Cómo paso mis reportes a otro teléfono?','En el teléfono viejo: Respaldar datos. Manda el archivo al nuevo. En el nuevo: Historial → 📥 Restaurar respaldo.')+
+  d('¿Cómo corrijo un reporte ya guardado?','Historial → botón ✏️ Editar en ese reporte. Al guardar, reemplaza al anterior.')+
+  d('¿Cómo mando información por WhatsApp?','En Seguimiento: 📲 WhatsApp (texto) o 🖼️ Con imágenes (una imagen por actividad). En Resumen: el resumen semanal. Para un PDF, descárgalo y usa el menú de compartir del teléfono.')+
+  d('¿Funciona sin internet?','Sí, una vez instalada y abierta al menos una vez con internet. Todo se guarda en tu teléfono.')+
+  d('¿Qué hace Liberar espacio?','Borra las fotos de las actividades ya atendidas para ahorrar espacio, pero conserva el registro. Haz un respaldo antes.')+
+  d('Se cerró la app a la mitad de un reporte','Al abrirla de nuevo te aparece el borrador para continuarlo.')+`</div>`};
 const itemsDe=p=>p.items.map(t=>({texto:t,estado:'Pendiente',fotos:[],lista:p.n}));
 function nuevo(){const d=new Date();S.rep={id:String(Date.now()),fecha:hoyISO(),hora:d.toTimeString().slice(0,5),equipo:'',responsable:'',supervisor:'',items:[]}}
 
@@ -204,7 +244,7 @@ function render(){
     r.items.map((it,i)=>(it.lista&&(i===0||r.items[i-1].lista!==it.lista)?`<h3>${esc(it.lista)}</h3>`:'')+`<div class="ac" id="it${i}" style="border-left-color:${COL[it.estado]}">
       <div class="row sec" style="justify-content:space-between"><span><span class="chip">Actividad ${i+1}</span> <span class="chip">Folio ${it.folio}</span></span><button class="btn r" data-act="qi" data-i="${i}" title="Quitar actividad" style="margin:0">✕</button></div>
       <label class="lb">🛠️ Actividad</label><input data-it="${i}" list="acts" value="${esc(it.texto)}" placeholder="Describe la actividad">
-      <div class="g2"><div><label class="lb">📌 Estado</label><select data-es="${i}" style="background:${COL[it.estado]};color:#fff;border:0;font-weight:600">${opt(it.estado)}</select></div><div><label class="lb">🚦 Prioridad</label>${priSel(it,`data-pri="${i}"`)}</div></div>`+
+      <div class="g2"><div><label class="lb">📌 Resultado de la inspección</label><select data-es="${i}" style="background:${COL[it.estado]};color:#fff;border:0;font-weight:600">${opt(it.estado)}</select></div><div><label class="lb">🚦 Prioridad</label>${priSel(it,`data-pri="${i}"`)}</div></div>`+
       (it.fotos.length?`<div class="fotos">`+it.fotos.map((f,j)=>`<div class="foto"><img src="${f.data}" alt="Foto ${j+1}"><textarea rows="2" data-i="${i}" data-j="${j}" placeholder="Descripción de la foto">${esc(f.desc)}</textarea><button class="btn r" data-act="qf" data-i="${i}" data-j="${j}" style="width:100%;margin:0">🗑️ Quitar foto</button></div>`).join('')+`</div>`:'')+
       `<button class="addf" data-act="foto" data-i="${i}">📷 Agregar foto</button></div>`).join('')+
     `<button class="addf" data-act="ai" style="margin-bottom:14px">➕ Agregar actividad</button><div class="bar"><button class="btn" data-act="guardar">💾 Guardar reporte</button><button class="btn g" data-act="limpiar">🧹 Limpiar</button></div>`;
@@ -216,8 +256,8 @@ function render(){
     <div class="sc"><div class="ttl">💾 Datos y respaldo</div><div id="esp" style="margin-bottom:12px">Calculando espacio…</div><div class="g2"><button class="btn" data-act="resp">💾 Respaldar datos</button><button class="btn g" data-act="rest">📥 Restaurar respaldo</button></div><button class="btn r" data-act="liberar" style="width:100%;margin:10px 0 0">🧹 Liberar espacio</button><p class="mut" style="margin:8px 0 0">Liberar espacio borra las fotos de actividades ya atendidas y conserva el registro.</p></div>
     <h3>🗂️ Reportes guardados</h3>`+
     `<div id="hl">${histLista(rg)}</div>`;
-  }else if(S.tab==='res'){v=resumen()}else{v=seg()}
-  app.innerHTML=`${panelHeader()}${bannerBorrador()}${bannerAviso()}<nav>${tabs}</nav>${v}`;bdAuto();if(S.tab==='hist')espacio();
+  }else if(S.tab==='res'){v=resumen()}else if(S.tab==='ayuda'){v=ayuda()}else{v=seg()}
+  app.innerHTML=`${panelHeader()}${bannerBorrador()}${bannerAviso()}<nav>${tabs}</nav>${tabHint()}${v}`;bdAuto();if(S.tab==='hist')espacio();
 }
 
 app.addEventListener('input',e=>{const t=e.target;bdAuto();
@@ -236,6 +276,7 @@ app.addEventListener('change',async e=>{const t=e.target;
   else if(t.dataset.sq==='sdesde'||t.dataset.sq==='shasta'){S[t.dataset.sq]=t.value;segRefresh()}
   else if(t.dataset.pri!==undefined){S.rep.items[+t.dataset.pri].prioridad=t.value;render()}
   else if(t.dataset.sel!==undefined){if(t.checked)S.sel.add(t.dataset.sel);else S.sel.delete(t.dataset.sel);selUpd()}
+  else if(t.dataset.hint!==undefined){S.hints=t.checked;await kvSet('hints',S.hints)}
   else if(t.dataset.xf!==undefined){S.xfotos=t.checked}
   else if(t.dataset.cal!==undefined){S.cal=t.value;await kvSet('cal',S.cal)}
   else if(t.dataset.sx!==undefined){const [rid,ii,c]=t.dataset.sx.split('|'),r=S.reportes.find(x=>x.id===rid);if(!r)return;{const it=r.items[+ii],old=it[c],LB={atendio:'Atendió',nota:'Nota',prioridad:'Prioridad',compromiso:'Fecha compromiso',fechaAt:'Fecha de atención',avance:'Avance %'};if(old!==t.value&&LB[c])bit(it,LB[c]+': '+(old||'-')+' → '+String(t.value||'-').slice(0,60));it[c]=t.value}await kvSet('reportes',S.reportes);if(c==='compromiso'||c==='prioridad'||c==='avance')segRefresh()}
@@ -302,6 +343,9 @@ else if(a==='wa'){const v=segItems();if(!v.length){alert('No hay actividades par
     if(await pregunta('¿Marcar '+S.sel.size+' actividad(es) como atendidas el '+f+'?')){let n=0;
       S.sel.forEach(k=>{const [rid,ii]=k.split('|'),r=S.reportes.find(x=>x.id===rid),it=r&&r.items[+ii];if(!it)return;bit(it,'Cierre en lote: '+(it.atendido||'No atendido')+' → Atendido ('+f+')');it.atendido='Atendido';it.fechaAt=f;if(q)it.atendio=q;n++});
       S.sel.clear();await kvSet('reportes',S.reportes);alert(n+' actividad(es) marcadas como atendidas')}}
+  else if(a==='ayuda'){if(S.tab!=='ayuda')S.prev=S.tab;S.tab='ayuda'}
+  else if(a==='ayback'){S.tab=S.prev||'nuevo'}
+  else if(a==='tour'){showTour(0);return}
   else if(a==='segpdf'){await exportarSegPDF();return}
   else if(a==='sqlimpiar'){S.sfolio='';S.sdesde='';S.shasta=''}
   else if(a==='xlimpiar'){S.desde='';S.hasta=''}
@@ -642,7 +686,7 @@ async function exportarPDF(r){
   await guardarArchivo(`Reporte_${r.fecha}_${r.equipo.replace(/[^\w-]+/g,'_')}.pdf`,d.output('arraybuffer'));
   if(fallos)aviso('Atención: '+fallos+' foto(s) no se pudieron incluir en el PDF');}
 
-(async()=>{await abrir();const ps=await kvGet('plantillas'),p=await kvGet('plantilla'),r=await kvGet('reportes');if(ps)S.plantillas=ps;else if(p)S.plantillas=[{n:'General',items:p}];if(r)S.reportes=r;{const eq=await kvGet('equipos'),cl=await kvGet('cal'),cf=await kvGet('cfg');if(cf){S.planta=cf.planta||'';S.logo=cf.logo||''}if(eq)S.equipos=eq;if(cl)S.cal=cl;S.reportes.forEach(x=>{if(x.equipo&&!S.equipos.some(e=>norm(e)===norm(x.equipo)))S.equipos.push(x.equipo.trim())})}let ch=false;S.reportes.forEach(x=>x.items.forEach(it=>{if(!it.folio){it.folio=folioNuevo();ch=true}}));S.reportes.filter(x=>!x.folio).sort((a,b)=>(a.fecha+a.hora+a.id).localeCompare(b.fecha+b.hora+b.id)).forEach(x=>{x.folio=repFolio();ch=true});const bd0=await kvGet('borrador');if(bd0&&bd0.rep)S.borrador=bd0;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}if(ch)await kvSet('reportes',S.reportes);render()})();
+(async()=>{await abrir();const ps=await kvGet('plantillas'),p=await kvGet('plantilla'),r=await kvGet('reportes');if(ps)S.plantillas=ps;else if(p)S.plantillas=[{n:'General',items:p}];if(r)S.reportes=r;{const eq=await kvGet('equipos'),cl=await kvGet('cal'),cf=await kvGet('cfg');if(cf){S.planta=cf.planta||'';S.logo=cf.logo||''}if(eq)S.equipos=eq;if(cl)S.cal=cl;S.reportes.forEach(x=>{if(x.equipo&&!S.equipos.some(e=>norm(e)===norm(x.equipo)))S.equipos.push(x.equipo.trim())})}{const hh=await kvGet('hints');if(hh===false)S.hints=false}let ch=false;S.reportes.forEach(x=>x.items.forEach(it=>{if(!it.folio){it.folio=folioNuevo();ch=true}}));S.reportes.filter(x=>!x.folio).sort((a,b)=>(a.fecha+a.hora+a.id).localeCompare(b.fecha+b.hora+b.id)).forEach(x=>{x.folio=repFolio();ch=true});const bd0=await kvGet('borrador');if(bd0&&bd0.rep)S.borrador=bd0;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}if(ch)await kvSet('reportes',S.reportes);render();if(!(await kvGet('tour')))showTour(0)})();
 </script>
 <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
